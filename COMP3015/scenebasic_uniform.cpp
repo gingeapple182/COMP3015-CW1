@@ -15,10 +15,13 @@ using std::endl;
 
 using glm::vec3;
 using glm::vec4;
+using glm::mat3;
 using glm::mat4;
 
-SceneBasic_Uniform::SceneBasic_Uniform() : plane(50.0f, 50.0f, 100, 100), teapot(14, glm::mat4(1.0f)), torus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50) {
-	mesh = ObjMesh::load("media/pig_triangulated.obj",true);
+SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), plane(50.0f, 50.0f, 100, 100), teapot(14, glm::mat4(1.0f)), torus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50) {
+	pigMesh = ObjMesh::load("media/pig_triangulated.obj",true);
+	R2Mesh = ObjMesh::load("media/Low_Poly_R2D2.obj", true);
+	C1Mesh = ObjMesh::load("media/C1-10P_obj.obj", true);
 }
 
 void SceneBasic_Uniform::initScene()
@@ -32,7 +35,7 @@ void SceneBasic_Uniform::initScene()
 	projection = mat4(1.0f);
 	rotateModel = mat4(1.0f);
 	rotateModel = glm::translate(rotateModel, vec3(4.0f, 0.26f, 5.0f));
-
+	angle = 0.0f;
 	float x, z;
 	for (int i = 0; i < 3; i++) {
 		std::stringstream name;
@@ -51,10 +54,11 @@ void SceneBasic_Uniform::initScene()
 	//prog.setUniform("lights[1].La", vec3(0.0f, 0.2f, 0.0f));
 	//prog.setUniform("lights[2].La", vec3(0.2f, 0.0f, 0.0f));
 
-	prog.setUniform("Spot.L", vec3(0.9f));
-	prog.setUniform("Spot.La", vec3(0.5f));
-	prog.setUniform("Spot.Exponent", 10.0f);
-	prog.setUniform("Spot.Cutoff", glm::radians(120.0f));
+	
+	prog.setUniform("Spot.L", vec3(0.7f)); 
+	prog.setUniform("Spot.La", vec3(0.5f)); 
+	prog.setUniform("Spot.Exponent", 25.0f); 
+	prog.setUniform("Spot.Cutoff", glm::radians(100.0f));
 
 }
 
@@ -80,7 +84,8 @@ void SceneBasic_Uniform::update(float t)
 	tPrev = t;
 	angle += 0.25f * deltaT;
 	if (angle > glm::two_pi<float>())
-		angle = glm::two_pi<float>();
+		angle -= glm::two_pi<float>();
+
 	render();
 
 }
@@ -89,35 +94,71 @@ void SceneBasic_Uniform::render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
-	vec4 lightPos = vec4(10.0f, 10.0f, 10.0f, 1.0f);
+	vec4 lightPos = vec4(10.0f * cos(angle), 10.0f, 10.0f * sin(angle), 1.0f);
 	prog.setUniform("Spot.Position", vec3(view * lightPos));
 	glm::mat3 normalMatrix = glm::mat3(vec3(view[0]), vec3(view[1]), vec3(view[2]));
 	prog.setUniform("Spot.Direction", normalMatrix * vec3(-lightPos));
 
-	prog.setUniform("Material.Kd", 1.0f, 0.5f, 0.0f);
+	prog.setUniform("Material.Kd", 1.0f, 0.4f, 0.7f);
 	prog.setUniform("Material.Ks", vec3(0.5f));
 	prog.setUniform("Material.Ka", vec3(0.5f));
 	prog.setUniform("Material.Shinniness", 180.0f);
 	rotateModel = glm::translate(rotateModel, vec3(-0.9f, 0.0f, -0.9f));
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(0.0f, 0.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(0.0f), vec3(1.0f, 0.0f, 0.0f));
+	model = glm::translate(model, vec3(1.0f, 0.4f, 0.7f));
+	model = glm::rotate(model, glm::radians(50.0f), vec3(0.0f, 1.0f, 0.0f));
 	model = glm::scale(model, vec3(3.0f));
 	setMatrices();
-	mesh->render();
+	pigMesh->render();
 
+
+	prog.setUniform("Material.Kd", 0.0f, 0.5f, 1.0f);
+	prog.setUniform("Material.Ks", vec3(0.5f));
+	prog.setUniform("Material.Ka", vec3(0.8f));
+	prog.setUniform("Material.Shinniness", 80.0f);
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(-4.0f, 0.0f, 0.0f));
+	model = glm::translate(model, vec3(0.0f, 2.0f, -5.0f));
+	model = glm::rotate(model, glm::radians(45.0f), vec3(0.0f, 1.0f, 0.0f));
+	model = glm::scale(model, vec3(0.5f));
+	setMatrices();
+	R2Mesh->render();
+
+
+	prog.setUniform("Material.Kd", 1.0f, 0.5f, 0.0f);
+	prog.setUniform("Material.Ks", vec3(0.5f));
+	prog.setUniform("Material.Ka", vec3(0.8f));
+	prog.setUniform("Material.Shinniness", 80.0f);
+
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(0.0f, 2.0f, 5.0f));
+	model = glm::rotate(model, glm::radians(45.0f), vec3(0.0f, 1.0f, 0.0f));
+	model = glm::scale(model, vec3(2.0f));
+	setMatrices();
+	C1Mesh->render();
+
+
+	prog.setUniform("Material.Kd", 1.0f, 1.0f, 0.0f);
+	prog.setUniform("Material.Ks", vec3(0.95f));
+	prog.setUniform("Material.Ka", vec3(0.2f * 0.3f, 0.55f * 0.3f, 0.9f * 0.3f));
+	prog.setUniform("Material.Shinniness", 180.0f);
+
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(-5.0f, 0.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
 
 	setMatrices();
 	teapot.render();
 
 
+	prog.setUniform("Material.Kd", 0.76f, 0.60f, 0.42f);
+	prog.setUniform("Material.Ks", vec3(0.2f));
+	prog.setUniform("Material.Ka", vec3(0.2f));
+	prog.setUniform("Material.Shinniness", 18.0f);
+
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(4.0f, 0.0f, 0.0f));
+	model = glm::translate(model, vec3(5.0f, 0.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(90.0f), vec3(1.0f, 0.0f, 0.0f));
 
 	setMatrices();

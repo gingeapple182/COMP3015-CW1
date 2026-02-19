@@ -20,7 +20,9 @@ private:
     Torus torus;
     Teapot teapot;
     Plane plane;
-    std::unique_ptr<ObjMesh> mesh;
+    std::unique_ptr<ObjMesh> R2Mesh;
+	std::unique_ptr<ObjMesh> C1Mesh;    
+	std::unique_ptr<ObjMesh> pigMesh;
     glm::mat4 rotateModel;
 
     float tPrev = 0.0f;
