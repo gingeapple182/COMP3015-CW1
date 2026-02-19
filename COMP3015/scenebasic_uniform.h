@@ -11,6 +11,7 @@
 #include "helper/objmesh.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "helper/cube.h"
 
 
 class SceneBasic_Uniform : public Scene
@@ -20,9 +21,10 @@ private:
     Torus torus;
     Teapot teapot;
     Plane plane;
+    Cube cube;
     std::unique_ptr<ObjMesh> R2Mesh;
 	std::unique_ptr<ObjMesh> C1Mesh;    
-	std::unique_ptr<ObjMesh> pigMesh;
+	//std::unique_ptr<ObjMesh> pigMesh;
     glm::mat4 rotateModel;
 
     float tPrev = 0.0f;
