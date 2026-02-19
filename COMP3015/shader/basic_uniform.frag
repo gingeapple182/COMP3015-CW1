@@ -1,12 +1,12 @@
 #version 460
 
-in vec3 Position;
-in vec3 Normal;
+in vec3 LightDir;
+in vec3 ViewDir;
 in vec2 TexCoord;
 
 layout (location = 0) out vec4 FragColor;
-layout (binding = 0) uniform sampler2D BaseTex;
-layout (binding = 1) uniform sampler2D AlphaTex;
+layout (binding = 0) uniform sampler2D DiffuseTex;
+layout (binding = 1) uniform sampler2D NormalMapTex;
 
 //uniform struct LightInfo{
 //    vec4 Position;
@@ -64,19 +64,22 @@ const float scaleFactor = 1.0/levels;
 
 
 
-vec3 blinnPhong(vec3 position, vec3 n) {
+vec3 blinnPhong(vec3 n) {
     vec3 diffuse = vec3(0), spec = vec3(0);
     
-    vec4 BaseTexColour = texture(BaseTex, TexCoord);
-    vec4 AlphaTexColour = texture(AlphaTex, TexCoord);
-    vec3 texColour = mix(BaseTexColour.rgb, AlphaTexColour.rgb, AlphaTexColour.a);
-    
+    //vec4 BaseTexColour = texture(DiffuseTex, TexCoord);
+    //vec4 AlphaTexColour = texture(NormalMapTex, TexCoord);
+    //vec3 texColour = mix(BaseTexColour.rgb, AlphaTexColour.rgb, AlphaTexColour.a);
+    vec3 texColour = texture(DiffuseTex, TexCoord).rgb;
+
     vec3 ambient = Light.La * texColour;
-    vec3 s = normalize(Light.Position.xyz - position);
+    vec3 s = normalize(LightDir);
     float sDotN = max(dot(s, n), 0.0);
+
     diffuse = texColour * sDotN;
+
     if (sDotN > 0.0) {
-	    vec3 v = normalize(-position.xyz);
+	    vec3 v = normalize(ViewDir);
 		vec3 h = normalize(v + s);
 		spec = Material.Ks * pow(max(dot(h, n), 0.0), Material.Shininess);
 	}
@@ -122,11 +125,11 @@ vec3 blinnPhongSpot(vec3 position, vec3 n)
 
 void main() {
 //fog stuff
-    float distance = abs(Position.z);
-    float fogFactor = (Fog.MaxDistance - distance) / (Fog.MaxDistance - Fog.MinDistance);
-    fogFactor = clamp(fogFactor, 0.0, 1.0);
-    vec3 shadeColour = blinnPhong(Position, normalize(Normal));
-    vec3 Colour = mix(Fog.Colour, shadeColour, fogFactor);  // -- remember to put Colour instead of shadeColour when i want fog back
+    //float distance = abs(Position.z);
+    //float fogFactor = (Fog.MaxDistance - distance) / (Fog.MaxDistance - Fog.MinDistance);
+    //fogFactor = clamp(fogFactor, 0.0, 1.0);
+    //vec3 shadeColour = blinnPhong(Position, normalize(Normal));
+    //vec3 Colour = mix(Fog.Colour, shadeColour, fogFactor);  // -- remember to put Colour instead of shadeColour when i want fog back
 //phong
 	//vec3 Colour = vec3(0.0);
     //for (int i = 0; i <3; i++)
@@ -136,5 +139,7 @@ void main() {
     //vec3 Colour = shadeColour;
     //FragColor = vec4(Colour, 1.0);
 //blinnphong
-    FragColor = vec4(shadeColour, 1.0);
+    vec3 normal = texture(NormalMapTex, TexCoord).xyz;
+    normal.xy = 2.0 * normal.xy - 1.0;
+    FragColor = vec4(blinnPhong(normalize(normal)), 1.0);
 }

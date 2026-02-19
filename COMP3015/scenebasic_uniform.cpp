@@ -19,7 +19,7 @@ using glm::vec4;
 using glm::mat3;
 using glm::mat4;
 
-SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), plane(100.0f, 100.0f, 100, 100), teapot(14, glm::mat4(1.0f)), torus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50) {
+SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::pi<float>() / 2.0f), plane(100.0f, 100.0f, 100, 100), teapot(14, glm::mat4(1.0f)), torus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50) {
 	R2Mesh = ObjMesh::load("media/Low_Poly_R2D2.obj", true);
 	C1Mesh = ObjMesh::load("media/C1-10P_obj.obj", true);
 }
@@ -66,13 +66,14 @@ void SceneBasic_Uniform::initScene()
 	prog.setUniform("Fog.MinDistance", 10.0f);
 	prog.setUniform("Fog.Colour", vec3(0.5f, 0.5f, 0.5f));*/
 
-	GLuint brick = Texture::loadTexture("media/texture/Chopper_BaseColor.png");
-	GLuint moss = Texture::loadTexture("media/texture/moss.png");
+	GLuint diffuseTexture = Texture::loadTexture("media/texture/Chopper_BaseColor.png");
+	GLuint normalMap = Texture::loadTexture("media/texture/Chopper_Normal.png");
+	
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, brick);
+	glBindTexture(GL_TEXTURE_2D, diffuseTexture);
 	
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, moss);
+	glBindTexture(GL_TEXTURE_2D, normalMap);
 }
 
 void SceneBasic_Uniform::compile()
@@ -99,6 +100,11 @@ void SceneBasic_Uniform::update(float t)
 	if (angle > glm::two_pi<float>())
 		angle -= glm::two_pi<float>();
 
+	/*if (this->m_animate) {
+		angle += rotSpeed * deltaT;
+		if (angle > glm::two_pi<float>())
+			angle -= glm::two_pi<float>();
+	}*/
 	render();
 
 }

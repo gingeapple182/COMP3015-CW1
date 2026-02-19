@@ -29,6 +29,7 @@ private:
 
     float tPrev = 0.0f;
     float angle = 0.0f;
+    float rotSpeed;
 
     GLSLProgram prog;
     void compile();
