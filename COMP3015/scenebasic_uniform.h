@@ -26,6 +26,9 @@ private:
 	std::unique_ptr<ObjMesh> C1Mesh;    
 	//std::unique_ptr<ObjMesh> pigMesh;
     glm::mat4 rotateModel;
+    GLuint C1diffuseTexture, C1normalMap;
+    GLuint R2diffuseTexture, R2normalMap;
+
 
     float tPrev = 0.0f;
     float angle = 0.0f;

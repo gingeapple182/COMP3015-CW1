@@ -140,6 +140,8 @@ void main() {
     //FragColor = vec4(Colour, 1.0);
 //blinnphong
     vec3 normal = texture(NormalMapTex, TexCoord).xyz;
-    normal.xy = 2.0 * normal.xy - 1.0;
+    //normal.xy = 2.0 * normal.xy - 1.0;
+    normal = normal * 2.0 - 1.0; 
+    normal = normalize(normal);
     FragColor = vec4(blinnPhong(normalize(normal)), 1.0);
 }

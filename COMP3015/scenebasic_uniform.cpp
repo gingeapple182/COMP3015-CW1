@@ -60,20 +60,18 @@ void SceneBasic_Uniform::initScene()
 	//prog.setUniform("Spot.Exponent", 25.0f); 
 	//prog.setUniform("Spot.Cutoff", glm::radians(100.0f));
 
-	prog.setUniform("Light.L", vec3(0.9f));
-	prog.setUniform("Light.La", vec3(0.05f));
+	prog.setUniform("Light.L", vec3(0.5f));
+	prog.setUniform("Light.La", vec3(0.25f));
 	/*prog.setUniform("Fog.MaxDistance", 25.0f);
 	prog.setUniform("Fog.MinDistance", 10.0f);
 	prog.setUniform("Fog.Colour", vec3(0.5f, 0.5f, 0.5f));*/
 
-	GLuint diffuseTexture = Texture::loadTexture("media/texture/Chopper_BaseColor.png");
-	GLuint normalMap = Texture::loadTexture("media/texture/Chopper_Normal.png");
+	C1diffuseTexture = Texture::loadTexture("media/texture/Chopper_BaseColor.png"); 
+	C1normalMap = Texture::loadTexture("media/texture/Chopper_Normal.png"); 
+	R2diffuseTexture = Texture::loadTexture("media/texture/R2_diffuse_green.png"); 
+	R2normalMap = Texture::loadTexture("media/texture/R2_normal.png");
 	
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, diffuseTexture);
 	
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, normalMap);
 }
 
 void SceneBasic_Uniform::compile()
@@ -112,7 +110,7 @@ void SceneBasic_Uniform::update(float t)
 void SceneBasic_Uniform::render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	
 	//blinnPhongSpot stuff
 	//vec4 lightPos = vec4(10.0f * cos(angle), 10.0f, 10.0f * sin(angle), 1.0f);
 	//prog.setUniform("Spot.Position", vec3(view * lightPos));
@@ -123,34 +121,44 @@ void SceneBasic_Uniform::render()
 	prog.setUniform("Light.Position", view * lightPos);
 
 
-	prog.setUniform("Material.Kd", 1.0f, 0.4f, 0.7f);
+	//prog.setUniform("Material.Kd", 1.0f, 0.4f, 0.7f);
 	prog.setUniform("Material.Ks", vec3(0.5f));
 	prog.setUniform("Material.Ka", vec3(0.5f));
 	prog.setUniform("Material.Shininess", 180.0f);
 	rotateModel = glm::translate(rotateModel, vec3(-0.9f, 0.0f, -0.9f));
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(1.0f, 2.0f, 0.7f));
+	model = glm::translate(model, vec3(1.0f, 2.0f, -4.0f));
 	model = glm::rotate(model, glm::radians(70.0f), vec3(0.0f, 1.0f, 0.0f));
 	model = glm::scale(model, vec3(3.0f));
 	setMatrices();
 	cube.render();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, R2diffuseTexture);
 
-	prog.setUniform("Material.Kd", 0.0f, 0.5f, 1.0f);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, R2normalMap);
+
+	//prog.setUniform("Material.Kd", 0.0f, 0.5f, 1.0f);
 	prog.setUniform("Material.Ks", vec3(0.5f));
 	prog.setUniform("Material.Ka", vec3(0.8f));
 	prog.setUniform("Material.Shininess", 80.0f);
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(0.0f, 2.0f, -5.0f));
+	model = glm::translate(model, vec3(1.0f, 2.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(45.0f), vec3(0.0f, 1.0f, 0.0f));
 	model = glm::scale(model, vec3(0.5f));
 	setMatrices();
 	R2Mesh->render();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, C1diffuseTexture);
 
-	prog.setUniform("Material.Kd", 1.0f, 0.5f, 0.0f);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, C1normalMap);
+
+	//prog.setUniform("Material.Kd", 1.0f, 0.5f, 0.0f);
 	prog.setUniform("Material.Ks", vec3(0.5f));
 	prog.setUniform("Material.Ka", vec3(0.8f));
 	prog.setUniform("Material.Shininess", 80.0f);
@@ -163,7 +171,7 @@ void SceneBasic_Uniform::render()
 	C1Mesh->render();
 
 
-	prog.setUniform("Material.Kd", 1.0f, 1.0f, 0.0f);
+	//prog.setUniform("Material.Kd", 1.0f, 1.0f, 0.0f);
 	prog.setUniform("Material.Ks", vec3(0.95f));
 	prog.setUniform("Material.Ka", vec3(0.2f * 0.3f, 0.55f * 0.3f, 0.9f * 0.3f));
 	prog.setUniform("Material.Shininess", 180.0f);
@@ -176,7 +184,7 @@ void SceneBasic_Uniform::render()
 	teapot.render();
 
 
-	prog.setUniform("Material.Kd", 0.76f, 0.60f, 0.42f);
+	//prog.setUniform("Material.Kd", 0.76f, 0.60f, 0.42f);
 	prog.setUniform("Material.Ks", vec3(0.2f));
 	prog.setUniform("Material.Ka", vec3(0.2f));
 	prog.setUniform("Material.Shininess", 18.0f);
@@ -189,7 +197,7 @@ void SceneBasic_Uniform::render()
 	torus.render();
 
 
-	prog.setUniform("Material.Kd", 0.1f, 0.8f, 0.1f);
+	//prog.setUniform("Material.Kd", 0.1f, 0.8f, 0.1f);
 	prog.setUniform("Material.Ks", vec3(0.0f));
 	prog.setUniform("Material.Ka", vec3(0.1f));
 	prog.setUniform("Material.Shininess", 180.0f);
