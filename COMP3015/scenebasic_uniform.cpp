@@ -22,6 +22,7 @@ using glm::mat4;
 SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::pi<float>() / 2.0f), plane(100.0f, 100.0f, 100, 100), teapot(14, glm::mat4(1.0f)), torus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50) {
 	R2Mesh = ObjMesh::load("media/Low_Poly_R2D2.obj", true);
 	C1Mesh = ObjMesh::load("media/C1-10P_obj.obj", true);
+	etaMesh = ObjMesh::load("media/X-Wing.obj", true);
 }
 
 void SceneBasic_Uniform::initScene()
@@ -70,8 +71,12 @@ void SceneBasic_Uniform::initScene()
 	C1normalMap = Texture::loadTexture("media/texture/Chopper_Normal.png"); 
 	R2diffuseTexture = Texture::loadTexture("media/texture/R2_diffuse_green.png"); 
 	R2normalMap = Texture::loadTexture("media/texture/R2_normal.png");
-	
-	
+	//etaDiffuseTexture = Texture::loadTexture("media/texture/skin_Anakin_Skywalker.png");
+	//etaDiffuse2Texture = Texture::loadTexture("media/texture/skinE.png");
+	//etaDiffuse3Texture = Texture::loadTexture("media/texture/r2.png");
+	etaDiffuseTexture = Texture::loadTexture("media/texture/xwing_main.png");
+	//etaNormalMap = Texture::loadTexture("media/texture/eta_nm.png");
+	etaNormalMap = Texture::loadTexture("media/texture/xwing_main_n.png");
 }
 
 void SceneBasic_Uniform::compile()
@@ -135,10 +140,16 @@ void SceneBasic_Uniform::render()
 	cube.render();
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, R2diffuseTexture);
+	glBindTexture(GL_TEXTURE_2D, etaDiffuseTexture);
+
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, etaDiffuse2Texture);
+
+	//glActiveTexture(GL_TEXTURE2);
+	//glBindTexture(GL_TEXTURE_2D, etaDiffuse3Texture);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, R2normalMap);
+	glBindTexture(GL_TEXTURE_2D, etaNormalMap);
 
 	//prog.setUniform("Material.Kd", 0.0f, 0.5f, 1.0f);
 	prog.setUniform("Material.Ks", vec3(0.5f));
@@ -146,11 +157,29 @@ void SceneBasic_Uniform::render()
 	prog.setUniform("Material.Shininess", 80.0f);
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(1.0f, 2.0f, 0.0f));
+	model = glm::translate(model, vec3(0.0f, 4.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(45.0f), vec3(0.0f, 1.0f, 0.0f));
-	model = glm::scale(model, vec3(0.5f));
+	model = glm::scale(model, vec3(1.0f));
 	setMatrices();
-	R2Mesh->render();
+	etaMesh->render();
+
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, R2diffuseTexture);
+
+	//glActiveTexture(GL_TEXTURE1);
+	//glBindTexture(GL_TEXTURE_2D, R2normalMap);
+
+	////prog.setUniform("Material.Kd", 0.0f, 0.5f, 1.0f);
+	//prog.setUniform("Material.Ks", vec3(0.5f));
+	//prog.setUniform("Material.Ka", vec3(0.8f));
+	//prog.setUniform("Material.Shininess", 80.0f);
+
+	//model = mat4(1.0f);
+	//model = glm::translate(model, vec3(1.0f, 2.0f, 0.0f));
+	//model = glm::rotate(model, glm::radians(45.0f), vec3(0.0f, 1.0f, 0.0f));
+	//model = glm::scale(model, vec3(0.5f));
+	//setMatrices();
+	//R2Mesh->render();
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, C1diffuseTexture);
@@ -205,7 +234,7 @@ void SceneBasic_Uniform::render()
 	model = mat4(1.0f);
 	model = glm::translate(model, vec3(0.0f, -0.45f, 0.0f));
 	setMatrices();
-	plane.render();
+	//plane.render();
 }
 
 void SceneBasic_Uniform::setMatrices() {

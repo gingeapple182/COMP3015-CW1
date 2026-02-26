@@ -23,11 +23,13 @@ private:
     Plane plane;
     Cube cube;
     std::unique_ptr<ObjMesh> R2Mesh;
-	std::unique_ptr<ObjMesh> C1Mesh;    
+	std::unique_ptr<ObjMesh> C1Mesh; 
+	std::unique_ptr<ObjMesh> etaMesh;
 	//std::unique_ptr<ObjMesh> pigMesh;
     glm::mat4 rotateModel;
     GLuint C1diffuseTexture, C1normalMap;
     GLuint R2diffuseTexture, R2normalMap;
+	GLuint etaDiffuseTexture, etaDiffuse2Texture, etaDiffuse3Texture, etaNormalMap;
 
 
     float tPrev = 0.0f;

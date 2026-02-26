@@ -7,6 +7,7 @@ in vec2 TexCoord;
 layout (location = 0) out vec4 FragColor;
 layout (binding = 0) uniform sampler2D DiffuseTex;
 layout (binding = 1) uniform sampler2D NormalMapTex;
+layout (binding = 2) uniform sampler2D DiffuseTex2;
 
 //uniform struct LightInfo{
 //    vec4 Position;
