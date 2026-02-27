@@ -66,15 +66,14 @@ const float scaleFactor = 1.0/levels;
 
 
 vec3 blinnPhong(vec3 n) {
-    vec3 diffuse = vec3(0), spec = vec3(0);
+    vec3 diffuse = vec3(0.0f); 
+    vec3 spec = vec3(0.0f);
     
-    //vec4 BaseTexColour = texture(DiffuseTex, TexCoord);
-    //vec4 AlphaTexColour = texture(NormalMapTex, TexCoord);
-    //vec3 texColour = mix(BaseTexColour.rgb, AlphaTexColour.rgb, AlphaTexColour.a);
     vec3 texColour = texture(DiffuseTex, TexCoord).rgb;
 
-    vec3 ambient = Light.La * texColour;
+    vec3 ambient = Light.La * Material.Ka * texColour;
     vec3 s = normalize(LightDir);
+    //float sDotN = max(dot(s, n), 0.0);
     float sDotN = max(dot(s, n), 0.0);
 
     diffuse = texColour * sDotN;

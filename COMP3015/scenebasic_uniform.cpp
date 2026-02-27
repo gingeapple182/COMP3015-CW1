@@ -24,6 +24,7 @@ SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::
 	R2Mesh = ObjMesh::load("media/Low_Poly_R2D2.obj", true);
 	C1Mesh = ObjMesh::load("media/C1-10P_obj.obj", true);
 	XWingMesh = ObjMesh::load("media/X-Wing.obj", true);
+	LightsaberMesh = ObjMesh::load("media/Lightsaber_01.obj", true);
 }
 
 void SceneBasic_Uniform::initScene()
@@ -33,8 +34,8 @@ void SceneBasic_Uniform::initScene()
 	glEnable(GL_DEPTH_TEST);
 
 	model = mat4(1.0f);
-	//view = glm::lookAt(vec3(5.0f, 7.5f, 7.5f), vec3(0.0f, 0.75f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-	view = glm::lookAt(camPos, camPos + camFront, camUp);
+	view = glm::lookAt(vec3(5.0f, 7.5f, 7.5f), vec3(0.0f, 0.75f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+	//view = glm::lookAt(camPos, camPos + camFront, camUp);
 
 	GLFWwindow* win = glfwGetCurrentContext();
 	if (win)
@@ -86,11 +87,9 @@ void SceneBasic_Uniform::initScene()
 	C1normalMap = Texture::loadTexture("media/texture/Chopper_Normal.png"); 
 	R2diffuseTexture = Texture::loadTexture("media/texture/R2_diffuse_green.png"); 
 	R2normalMap = Texture::loadTexture("media/texture/R2_normal.png");
-	//etaDiffuseTexture = Texture::loadTexture("media/texture/skin_Anakin_Skywalker.png");
-	//etaDiffuse2Texture = Texture::loadTexture("media/texture/skinE.png");
-	//etaDiffuse3Texture = Texture::loadTexture("media/texture/r2.png");
+	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_BaseColor.png");
+	LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_Normal.png");
 	XWingDiffuseTexture = Texture::loadTexture("media/texture/xwing_main.png");
-	//etaNormalMap = Texture::loadTexture("media/texture/eta_nm.png");
 	XWingNormalMap = Texture::loadTexture("media/texture/xwing_main_n.png");
 }
 
@@ -149,9 +148,14 @@ void SceneBasic_Uniform::render()
 	//moving light
 	//vec4 lightPos = vec4(10.0f * cos(angle), 10.0f, 10.0f * sin(angle), 1.0f);
 	//prog.setUniform("Light.Position", view * lightPos);
-	glm::vec3 lightDirWorld = glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f)); // tweak this
-	glm::vec3 lightPosWorld = -lightDirWorld * 200.0f; // far away in opposite direction
-	prog.setUniform("Light.Position", view * glm::vec4(lightPosWorld, 1.0f));
+	
+	//glm::vec3 lightDirWorld = glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f)); // tweak this
+	//glm::vec3 lightPosWorld = -lightDirWorld * 200.0f; // far away in opposite direction
+	//prog.setUniform("Light.Position", view * glm::vec4(lightPosWorld, 0.0f));
+
+	glm::vec3 lightDirWorld = glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f));
+	glm::vec3 lightDirViewSpace = glm::mat3(view) * -lightDirWorld;
+	prog.setUniform("Light.Position", glm::vec4(lightDirViewSpace, 0.0f));
 
 	//prog.setUniform("Material.Kd", 1.0f, 0.4f, 0.7f);
 	prog.setUniform("Material.Ks", vec3(0.5f));
@@ -195,7 +199,7 @@ void SceneBasic_Uniform::render()
 	glm::vec3 right = glm::normalize(glm::cross(forward, camUp));
 	glm::vec3 up = glm::normalize(glm::cross(right, forward));
 
-	// Offsets relative to camera (tweak these)
+	// Offsets relative to camera
 	float followForward = 8.2f;   // in front of camera
 	float followDown = -2.7f;  // below camera (negative = down)
 	float followRight = 0.0f;   // sideways
@@ -237,18 +241,23 @@ void SceneBasic_Uniform::render()
 	setMatrices();
 	C1Mesh->render();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, LSdiffuseTexture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, LSnormalMap);
 
 	//prog.setUniform("Material.Kd", 1.0f, 1.0f, 0.0f);
-	prog.setUniform("Material.Ks", vec3(0.95f));
-	prog.setUniform("Material.Ka", vec3(0.2f * 0.3f, 0.55f * 0.3f, 0.9f * 0.3f));
-	prog.setUniform("Material.Shininess", 180.0f);
+	prog.setUniform("Material.Ks", vec3(0.5f));
+	prog.setUniform("Material.Ka", vec3(0.8f));
+	prog.setUniform("Material.Shininess", 80.0f);
 
 	model = mat4(1.0f);
 	model = glm::translate(model, vec3(-5.0f, 0.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
 
 	setMatrices();
-	teapot.render();
+	LightsaberMesh->render();
 
 
 	//prog.setUniform("Material.Kd", 0.76f, 0.60f, 0.42f);
@@ -384,16 +393,19 @@ void SceneBasic_Uniform::updateCamera(float dt)
 	// (Optional) re-orthonormalise up so drift doesn’t build up over time
 	glm::vec3 up = glm::cross(right, forward);
 	if (glm::length(up) > 0.0001f) up = glm::normalize(up);
-
+	float strafe = 0.0f;
+	
 	// --- WASD translate in camera space ---
 	if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS) camPos += forward * speed;
 	if (glfwGetKey(win, GLFW_KEY_S) == GLFW_PRESS) camPos -= forward * speed;
-	if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) camPos -= right * speed;
-	if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS) camPos += right * speed;
-
-	float strafe = 0.0f;
-	if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) strafe -= 1.0f;
-	if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS) strafe += 1.0f;
+	if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) {
+		camPos -= right * speed;
+		strafe -= 1.0f;
+	}
+	if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS) {
+		camPos += right * speed;
+		strafe += 1.0f;
+	}
 
 	// Bank opposite sign depending on what feels right. Start with this:
 	shipRollTarget = -strafe * maxShipRoll;

@@ -28,11 +28,11 @@ private:
     std::unique_ptr<ObjMesh> R2Mesh;
 	std::unique_ptr<ObjMesh> C1Mesh; 
 	std::unique_ptr<ObjMesh> XWingMesh;
-	//std::unique_ptr<ObjMesh> pigMesh;
+	std::unique_ptr<ObjMesh> LightsaberMesh;
     glm::mat4 rotateModel;
     GLuint C1diffuseTexture, C1normalMap;
     GLuint R2diffuseTexture, R2normalMap;
-	GLuint etaDiffuseTexture, etaNormalMap;
+	GLuint LSdiffuseTexture, LSnormalMap;
 	GLuint XWingDiffuseTexture, XWingNormalMap;
     GLuint cubeTex;
 

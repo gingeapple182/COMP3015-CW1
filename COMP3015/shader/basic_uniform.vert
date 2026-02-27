@@ -47,15 +47,24 @@ void main()
 	// Make T orthogonal to N (helps a LOT with noisy normal maps)
 	T = normalize(T - N * dot(N, T));
 
-	vec3 B = normalize(cross(N, T)) * VertexTangent.w;
-
+	vec3 B = cross(N, T) * VertexTangent.w;
+	
 	// Columns are T, B, N
 	mat3 TBN = mat3(T, B, N);
 
+	mat3 invTBN = transpose(TBN);
+
 	vec3 Position = (ModelViewMatrix * vec4(VertexPosition, 1.0)).xyz;
 
-	LightDir = TBN * (Light.Position.xyz - Position);
-	ViewDir  = TBN * normalize(-Position);
+	vec3 lightDir;
+	if (Light.Position.w == 0.0)
+		lightDir = normalize(mat3(ModelViewMatrix) * Light.Position.xyz);       // directional
+	else
+		lightDir = Light.Position.xyz - Position;        // point light
+	LightDir = invTBN * lightDir;
+	//LightDir = TBN * (Light.Position.xyz - Position);
+
+	ViewDir  = invTBN * normalize(-Position);
 	TexCoord = VertexTexCoord;
 
 	gl_Position = MVP * vec4(VertexPosition, 1.0);
