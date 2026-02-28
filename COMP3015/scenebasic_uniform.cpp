@@ -20,10 +20,8 @@ using glm::vec4;
 using glm::mat3;
 using glm::mat4;
 
-SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::pi<float>() / 2.0f), plane(100.0f, 100.0f, 100, 100), teapot(14, glm::mat4(1.0f)), torus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50), sky(100.0f) {
-	R2Mesh = ObjMesh::load("media/Low_Poly_R2D2.obj", true);
+SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::pi<float>() / 2.0f), plane(79.4f, 53.2f, 100, 100), sky(100.0f) {
 	C1Mesh = ObjMesh::load("media/C1-10P_obj.obj", true);
-	XWingMesh = ObjMesh::load("media/X-Wing.obj", true);
 	LightsaberMesh = ObjMesh::load("media/Lightsaber_01.obj", true);
 }
 
@@ -52,7 +50,7 @@ void SceneBasic_Uniform::initScene()
 	rotateModel = mat4(1.0f);
 	rotateModel = glm::translate(rotateModel, vec3(4.0f, 0.26f, 5.0f));
 	angle = 0.0f;
-	float x, z;
+	//float x, z;
 	/*for (int i = 0; i < 3; i++) {
 		std::stringstream name;
 		name << "Lights[" << i << "].Position";
@@ -71,10 +69,10 @@ void SceneBasic_Uniform::initScene()
 	//prog.setUniform("lights[2].La", vec3(0.2f, 0.0f, 0.0f));
 
 	//blinnPhongSpot stuff
-	//prog.setUniform("Spot.L", vec3(0.7f)); 
-	//prog.setUniform("Spot.La", vec3(0.5f)); 
-	//prog.setUniform("Spot.Exponent", 25.0f); 
-	//prog.setUniform("Spot.Cutoff", glm::radians(100.0f));
+	prog.setUniform("Spot.L", vec3(0.7f)); 
+	prog.setUniform("Spot.La", vec3(0.5f)); 
+	prog.setUniform("Spot.Exponent", 25.0f); 
+	prog.setUniform("Spot.Cutoff", glm::radians(20.0f));
 
 	prog.setUniform("Light.L", vec3(0.5f));
 	prog.setUniform("Light.La", vec3(0.25f));
@@ -85,12 +83,11 @@ void SceneBasic_Uniform::initScene()
 
 	C1diffuseTexture = Texture::loadTexture("media/texture/Chopper_BaseColor.png"); 
 	C1normalMap = Texture::loadTexture("media/texture/Chopper_Normal.png"); 
-	R2diffuseTexture = Texture::loadTexture("media/texture/R2_diffuse_green.png"); 
-	R2normalMap = Texture::loadTexture("media/texture/R2_normal.png");
-	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_BaseColor.png");
+
+	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_BaseColor1.png");
 	LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_Normal.png");
-	XWingDiffuseTexture = Texture::loadTexture("media/texture/xwing_main.png");
-	XWingNormalMap = Texture::loadTexture("media/texture/xwing_main_n.png");
+
+	WorkbenchDiffuseMap = Texture::loadTexture("media/texture/workbench.png");
 }
 
 void SceneBasic_Uniform::compile()
@@ -122,12 +119,21 @@ void SceneBasic_Uniform::update(float t)
 	if (angle > glm::two_pi<float>())
 		angle -= glm::two_pi<float>();
 
-	/*if (this->m_animate) {
-		angle += rotSpeed * deltaT;
-		if (angle > glm::two_pi<float>())
-			angle -= glm::two_pi<float>();
-	}*/
-	updateCamera(deltaT);
+	GLFWwindow* win = glfwGetCurrentContext();
+	if (win)
+	{
+		if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS)
+			hiltYawDeg -= hiltYawSpeed * deltaT;
+		if (glfwGetKey(win, GLFW_KEY_S) == GLFW_PRESS) 
+			hiltYawDeg += hiltYawSpeed * deltaT;
+		if (glfwGetKey(win, GLFW_KEY_UP) == GLFW_PRESS)   
+			hiltYawDeg -= hiltYawSpeed * deltaT; 
+		if (glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS) 
+			hiltYawDeg += hiltYawSpeed * deltaT;
+
+		if (hiltYawDeg > 360.0f) hiltYawDeg -= 360.0f;
+		if (hiltYawDeg < 0.0f)   hiltYawDeg += 360.0f;
+	}
 	render();
 
 }
@@ -153,74 +159,27 @@ void SceneBasic_Uniform::render()
 	//glm::vec3 lightPosWorld = -lightDirWorld * 200.0f; // far away in opposite direction
 	//prog.setUniform("Light.Position", view * glm::vec4(lightPosWorld, 0.0f));
 
+	// --- Moving spotlight (VIEW space) ---
+	glm::vec4 lightPosWorld = glm::vec4(10.0f * cos(angle), 10.0f, 10.0f * sin(angle), 1.0f);
+
+	// Position in view space (matches your vertex shader's view-space Position)
+	prog.setUniform("Spot.Position", glm::vec3(view * lightPosWorld));
+
+	// Aim the spotlight at your C1 model area (pick whatever target you want)
+	glm::vec3 targetWorld = glm::vec3(0.0f, 2.0f, 5.0f);
+
+	// Direction in world space: from light -> target
+	glm::vec3 lightDirWorldSpot = glm::normalize(targetWorld - glm::vec3(lightPosWorld));
+
+	// Convert direction to view space (direction = w=0, so mat3(view) is correct)
+	glm::vec3 lightDirView = glm::mat3(view) * lightDirWorldSpot;
+	prog.setUniform("Spot.Direction", lightDirView);
+	
+
 	glm::vec3 lightDirWorld = glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f));
 	glm::vec3 lightDirViewSpace = glm::mat3(view) * -lightDirWorld;
 	prog.setUniform("Light.Position", glm::vec4(lightDirViewSpace, 0.0f));
 
-	//prog.setUniform("Material.Kd", 1.0f, 0.4f, 0.7f);
-	prog.setUniform("Material.Ks", vec3(0.5f));
-	prog.setUniform("Material.Ka", vec3(0.5f));
-	prog.setUniform("Material.Shininess", 180.0f);
-	rotateModel = glm::translate(rotateModel, vec3(-0.9f, 0.0f, -0.9f));
-
-	model = mat4(1.0f);
-	model = glm::translate(model, vec3(1.0f, 2.0f, -4.0f));
-	model = glm::rotate(model, glm::radians(70.0f), vec3(0.0f, 1.0f, 0.0f));
-	model = glm::scale(model, vec3(3.0f));
-	setMatrices();
-	cube.render();
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, XWingDiffuseTexture);
-
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, etaDiffuse2Texture);
-
-	//glActiveTexture(GL_TEXTURE2);
-	//glBindTexture(GL_TEXTURE_2D, etaDiffuse3Texture);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, XWingNormalMap);
-
-	//prog.setUniform("Material.Kd", 0.0f, 0.5f, 1.0f);
-	prog.setUniform("Material.Ks", vec3(0.5f));
-	prog.setUniform("Material.Ka", vec3(0.8f));
-	prog.setUniform("Material.Shininess", 180.0f);
-
-	/*model = mat4(1.0f);
-	model = glm::translate(model, vec3(0.0f, 4.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(45.0f), vec3(0.0f, 1.0f, 0.0f));
-	model = glm::scale(model, vec3(1.0f));
-	setMatrices();
-	XWingMesh->render();*/
-
-	// --- X-Wing follows camera ---
-	glm::vec3 forward = glm::normalize(camFront);
-	glm::vec3 right = glm::normalize(glm::cross(forward, camUp));
-	glm::vec3 up = glm::normalize(glm::cross(right, forward));
-
-	// Offsets relative to camera
-	float followForward = 8.2f;   // in front of camera
-	float followDown = -2.7f;  // below camera (negative = down)
-	float followRight = 0.0f;   // sideways
-
-	glm::vec3 xwingPos = camPos + forward * followForward + up * followDown + right * followRight;
-
-	// Build an orientation so the ship points the same way as the camera.
-	// NOTE: depending on how the OBJ is authored, you may need a fixed extra rotation after this.
-	glm::mat4 shipRot = glm::mat4(1.0f);
-	shipRot[0] = glm::vec4(right, 0.0f);
-	shipRot[1] = glm::vec4(up, 0.0f);
-	shipRot[2] = glm::vec4(-forward, 0.0f); // -forward is common for OpenGL forward axis
-
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, xwingPos);
-	model *= shipRot;
-	model = model * glm::rotate(glm::mat4(1.0f), glm::radians(shipRoll), glm::vec3(0, 0, 1));
-
-	model = glm::scale(model, glm::vec3(0.5f));
-	setMatrices();
-	XWingMesh->render();
 
 
 	glActiveTexture(GL_TEXTURE0);
@@ -241,6 +200,8 @@ void SceneBasic_Uniform::render()
 	setMatrices();
 	C1Mesh->render();
 
+
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, LSdiffuseTexture);
 
@@ -248,30 +209,24 @@ void SceneBasic_Uniform::render()
 	glBindTexture(GL_TEXTURE_2D, LSnormalMap);
 
 	//prog.setUniform("Material.Kd", 1.0f, 1.0f, 0.0f);
-	prog.setUniform("Material.Ks", vec3(0.5f));
-	prog.setUniform("Material.Ka", vec3(0.8f));
+	prog.setUniform("Material.Ks", vec3(0.25f));
+	prog.setUniform("Material.Ka", vec3(0.15f));
 	prog.setUniform("Material.Shininess", 80.0f);
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(-5.0f, 0.0f, 0.0f));
+	model = glm::translate(model, vec3(0.0f, 2.0f, 0.0f));
+	model = glm::scale(model, vec3(1.5f));
 	model = glm::rotate(model, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(300.0f), vec3(0.0f, 0.0f, 1.0f));
+	model = glm::rotate(model, glm::radians(hiltYawDeg), vec3(0.0f, 1.0f, 0.0f));
 
 	setMatrices();
 	LightsaberMesh->render();
 
 
-	//prog.setUniform("Material.Kd", 0.76f, 0.60f, 0.42f);
-	prog.setUniform("Material.Ks", vec3(0.2f));
-	prog.setUniform("Material.Ka", vec3(0.2f));
-	prog.setUniform("Material.Shininess", 18.0f);
 
-	model = mat4(1.0f);
-	model = glm::translate(model, vec3(5.0f, 0.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(90.0f), vec3(1.0f, 0.0f, 0.0f));
-
-	setMatrices();
-	torus.render();
-
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, WorkbenchDiffuseMap);
 
 	//prog.setUniform("Material.Kd", 0.1f, 0.8f, 0.1f);
 	prog.setUniform("Material.Ks", vec3(0.0f));
@@ -279,9 +234,11 @@ void SceneBasic_Uniform::render()
 	prog.setUniform("Material.Shininess", 180.0f);
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(0.0f, -0.45f, 0.0f));
+	model = glm::translate(model, vec3(0.0f, -1.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(25.0f), vec3(0.0f, 1.0f, 0.0f));
+	model = glm::scale(model, vec3(0.5f));
 	setMatrices();
-	//plane.render();
+	plane.render();
 
 	skyboxShader.use();
 	glActiveTexture(GL_TEXTURE0);

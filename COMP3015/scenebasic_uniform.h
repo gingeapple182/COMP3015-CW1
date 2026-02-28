@@ -21,19 +21,14 @@ class SceneBasic_Uniform : public Scene
 private:
 	glm::mat4 rotationMatrix;
     SkyBox sky;
-    Torus torus;
-    Teapot teapot;
     Plane plane;
     Cube cube;
-    std::unique_ptr<ObjMesh> R2Mesh;
 	std::unique_ptr<ObjMesh> C1Mesh; 
-	std::unique_ptr<ObjMesh> XWingMesh;
 	std::unique_ptr<ObjMesh> LightsaberMesh;
     glm::mat4 rotateModel;
     GLuint C1diffuseTexture, C1normalMap;
-    GLuint R2diffuseTexture, R2normalMap;
 	GLuint LSdiffuseTexture, LSnormalMap;
-	GLuint XWingDiffuseTexture, XWingNormalMap;
+    GLuint WorkbenchDiffuseMap;
     GLuint cubeTex;
 
 
@@ -68,6 +63,8 @@ private:
     float maxShipRoll = 35.0f;      // try 20–45
     float shipRollResponsiveness = 12.0f; // higher = snappier
 
+    float hiltYawDeg = 0.0f;
+    float hiltYawSpeed = 90.0f;
     bool cursorCaptured = true;
     bool escWasDown = false;
 
