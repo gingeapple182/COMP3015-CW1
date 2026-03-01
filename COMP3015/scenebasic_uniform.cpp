@@ -76,12 +76,23 @@ void SceneBasic_Uniform::initScene()
 
 	BladeDiffuseTexture = Texture::loadTexture("media/texture/white.jpg");
 	WorkbenchDiffuseMap = Texture::loadTexture("media/texture/workbench.png");
-
+	
+	// colours
+	glm::vec3 WHITE(1.00f, 1.00f, 1.00f);
+	glm::vec3 RED(1.00f, 0.00f, 0.00f);
+	glm::vec3 GREEN(0.00f, 1.00f, 0.00f);
+	glm::vec3 BLUE(0.00f, 0.45f, 1.00f);
+	glm::vec3 YELLOW(1.00f, 1.00f, 0.00f);
+	glm::vec3 ORANGE(1.00f, 0.50f, 0.00f);
+	glm::vec3 MAGENTA(1.00f, 0.00f, 1.00f);
+	
 	bladeEmissive.use();
-	bladeEmissive.setUniform("CoreIntensity", 5.0f);
-	bladeEmissive.setUniform("GlowIntensity", 7.5f);
-	bladeEmissive.setUniform("RimPower", 1.5f);
-	bladeEmissive.setUniform("GlowBase", 0.15f);
+	bladeEmissive.setUniform("BladeColour", bladeColours[bladeColourIndex]);
+	bladeEmissive.setUniform("Intensity", 8.0f);
+	bladeEmissive.setUniform("RimPower", 2.5f);
+	bladeEmissive.setUniform("RimIntensity", 0.6f);
+
+	
 }
 
 void SceneBasic_Uniform::compile()
@@ -121,6 +132,21 @@ void SceneBasic_Uniform::update(float t)
 	GLFWwindow* win = glfwGetCurrentContext();
 	if (win)
 	{
+		//blade toggle
+		if (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS && !Q_Pressed) {
+			bladeOn = !bladeOn;   // toggle once
+		}
+		Q_Pressed = (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS);
+		// colour cycling
+		if (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS && !E_Pressed)
+		{
+			bladeColourIndex = (bladeColourIndex + 1) % (int)bladeColours.size();
+
+			bladeEmissive.use();
+			bladeEmissive.setUniform("BladeColour", bladeColours[bladeColourIndex]);
+		}
+		E_Pressed = (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS);
+		//rotate hilt
 		if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS)
 			hiltYawDeg -= hiltYawSpeed * deltaT;
 		if (glfwGetKey(win, GLFW_KEY_S) == GLFW_PRESS) 
@@ -203,12 +229,9 @@ void SceneBasic_Uniform::render()
 
 
 	// Blade
-	if (!bladeOn)
+	if (bladeOn)
 	{
 		bladeEmissive.use();
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, BladeDiffuseTexture);
 
 		model = mat4(1.0f);
 		model = glm::translate(model, vec3(10.0f, 2.1f, -4.0f));
@@ -216,12 +239,13 @@ void SceneBasic_Uniform::render()
 		model = glm::rotate(model, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
 		model = glm::rotate(model, glm::radians(300.0f), vec3(0.0f, 0.0f, 1.0f));
 
-		setMatricesEmiss(bladeEmissive);
+		setMatricesEmiss();
 		BladeMEsh->render();
 	}
 
+	prog.use();
 	// Workbench
-	/*glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, WorkbenchDiffuseMap);
 
 	prog.setUniform("Material.Ks", vec3(0.0f));
@@ -233,7 +257,7 @@ void SceneBasic_Uniform::render()
 	model = glm::rotate(model, glm::radians(25.0f), vec3(0.0f, 1.0f, 0.0f));
 	model = glm::scale(model, vec3(0.5f));
 	setMatrices();
-	plane.render();*/
+	plane.render();
 
 	// Skybox stuff
 	skyboxShader.use();
@@ -254,11 +278,11 @@ void SceneBasic_Uniform::setMatrices() {
 	prog.setUniform("MVP", projection * mv);
 }
 
-void SceneBasic_Uniform::setMatricesEmiss(GLSLProgram& p) {
+void SceneBasic_Uniform::setMatricesEmiss() {
 	mat4 mv = view * model;
-	p.setUniform("ModelViewMatrix", mv);
-	p.setUniform("NormalMatrix", glm::mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
-	p.setUniform("MVP", projection * mv);
+	bladeEmissive.setUniform("ModelViewMatrix", mv);
+	bladeEmissive.setUniform("NormalMatrix", glm::mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+	bladeEmissive.setUniform("MVP", projection * mv);
 }
 
 void SceneBasic_Uniform::resize(int w, int h) {
@@ -267,4 +291,3 @@ void SceneBasic_Uniform::resize(int w, int h) {
     height = h;
 	projection = glm::perspective(glm::radians(70.0f), (float)w / h, 0.3f, 100.0f);
 }
-

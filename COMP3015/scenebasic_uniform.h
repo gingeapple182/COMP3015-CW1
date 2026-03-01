@@ -12,6 +12,7 @@
 #include "helper/objmesh.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <array>
 #include "helper/cube.h"
 #include "helper/skybox.h"
 
@@ -38,11 +39,25 @@ private:
     float angle = 0.0f;
     float rotSpeed;
 	bool bladeOn = false;
+    bool Q_Pressed = false;
+	bool E_Pressed = false;
+    glm::vec3 bladeColour;
+    std::array<glm::vec3, 7> bladeColours = {
+        glm::vec3(1.0f, 1.0f, 1.0f),   // WHITE
+        glm::vec3(1.0f, 0.0f, 0.0f),   // RED
+        glm::vec3(0.0f, 1.0f, 0.0f),   // GREEN
+        glm::vec3(0.0f, 0.45f, 1.0f),  // BLUE
+        glm::vec3(1.0f, 1.0f, 0.0f),   // YELLOW
+        glm::vec3(1.0f, 0.5f, 0.0f),   // ORANGE
+        glm::vec3(1.0f, 0.0f, 1.0f)    // MAGENTA
+    };
+    int bladeColourIndex = 0;
+
 
     GLSLProgram prog, skyboxShader, bladeEmissive;
     void compile();
     void setMatrices();
-    void setMatricesEmiss(GLSLProgram& p);
+    void setMatricesEmiss();
 
     // Camera stuff
     glm::vec3 camPos = glm::vec3(5.0f, 7.5f, 7.5f);
