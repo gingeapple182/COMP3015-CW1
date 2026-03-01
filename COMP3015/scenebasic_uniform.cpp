@@ -22,7 +22,9 @@ using glm::mat4;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::pi<float>() / 2.0f), plane(79.4f, 53.2f, 100, 100), sky(100.0f) {
 	C1Mesh = ObjMesh::load("media/C1-10P_obj.obj", true);
-	LightsaberMesh = ObjMesh::load("media/Lightsaber_01.obj", true);
+	//LightsaberMesh = ObjMesh::load("media/Lightsaber_01.obj", true);
+	LightsaberMesh = ObjMesh::load("media/Lightsaber_03.obj", true);
+	BladeMEsh = ObjMesh::load("media/cylinder.obj", true);
 }
 
 void SceneBasic_Uniform::initScene()
@@ -67,10 +69,19 @@ void SceneBasic_Uniform::initScene()
 	C1diffuseTexture = Texture::loadTexture("media/texture/Chopper_BaseColor.png"); 
 	C1normalMap = Texture::loadTexture("media/texture/Chopper_Normal.png"); 
 
-	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_BaseColor1.png");
-	LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_Normal.png");
+	//LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_BaseColor1.png");
+	//LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_01_lambert1_Normal.png");
+	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_BaseColor1.png");
+	LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_Normal.png");
 
+	BladeDiffuseTexture = Texture::loadTexture("media/texture/white.jpg");
 	WorkbenchDiffuseMap = Texture::loadTexture("media/texture/workbench.png");
+
+	bladeEmissive.use();
+	bladeEmissive.setUniform("CoreIntensity", 5.0f);
+	bladeEmissive.setUniform("GlowIntensity", 7.5f);
+	bladeEmissive.setUniform("RimPower", 1.5f);
+	bladeEmissive.setUniform("GlowBase", 0.15f);
 }
 
 void SceneBasic_Uniform::compile()
@@ -80,6 +91,11 @@ void SceneBasic_Uniform::compile()
 		prog.compileShader("shader/basic_uniform.frag");
 		prog.link();
 		prog.use();
+
+		bladeEmissive.compileShader("shader/blade.vert");
+		bladeEmissive.compileShader("shader/blade.frag");
+		bladeEmissive.link();
+		bladeEmissive.use();
 
 		skyboxShader.compileShader("shader/skybox.vert");
 		skyboxShader.compileShader("shader/skybox.frag");
@@ -186,8 +202,26 @@ void SceneBasic_Uniform::render()
 	LightsaberMesh->render();
 
 
+	// Blade
+	if (!bladeOn)
+	{
+		bladeEmissive.use();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, BladeDiffuseTexture);
+
+		model = mat4(1.0f);
+		model = glm::translate(model, vec3(10.0f, 2.1f, -4.0f));
+		model = glm::scale(model, vec3(0.5f));
+		model = glm::rotate(model, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(300.0f), vec3(0.0f, 0.0f, 1.0f));
+
+		setMatricesEmiss(bladeEmissive);
+		BladeMEsh->render();
+	}
+
 	// Workbench
-	glActiveTexture(GL_TEXTURE0);
+	/*glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, WorkbenchDiffuseMap);
 
 	prog.setUniform("Material.Ks", vec3(0.0f));
@@ -199,7 +233,7 @@ void SceneBasic_Uniform::render()
 	model = glm::rotate(model, glm::radians(25.0f), vec3(0.0f, 1.0f, 0.0f));
 	model = glm::scale(model, vec3(0.5f));
 	setMatrices();
-	plane.render();
+	plane.render();*/
 
 	// Skybox stuff
 	skyboxShader.use();
@@ -220,8 +254,14 @@ void SceneBasic_Uniform::setMatrices() {
 	prog.setUniform("MVP", projection * mv);
 }
 
-void SceneBasic_Uniform::resize(int w, int h)
-{
+void SceneBasic_Uniform::setMatricesEmiss(GLSLProgram& p) {
+	mat4 mv = view * model;
+	p.setUniform("ModelViewMatrix", mv);
+	p.setUniform("NormalMatrix", glm::mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+	p.setUniform("MVP", projection * mv);
+}
+
+void SceneBasic_Uniform::resize(int w, int h) {
 	glViewport(0, 0, w, h);
 	width = w;
     height = h;

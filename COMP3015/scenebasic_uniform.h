@@ -25,9 +25,11 @@ private:
     Cube cube;
 	std::unique_ptr<ObjMesh> C1Mesh; 
 	std::unique_ptr<ObjMesh> LightsaberMesh;
+	std::unique_ptr<ObjMesh> BladeMEsh;
     glm::mat4 rotateModel;
     GLuint C1diffuseTexture, C1normalMap;
 	GLuint LSdiffuseTexture, LSnormalMap;
+    GLuint BladeDiffuseTexture;
     GLuint WorkbenchDiffuseMap;
     GLuint cubeTex;
 
@@ -35,10 +37,12 @@ private:
     float tPrev = 0.0f;
     float angle = 0.0f;
     float rotSpeed;
+	bool bladeOn = false;
 
-    GLSLProgram prog, skyboxShader;
+    GLSLProgram prog, skyboxShader, bladeEmissive;
     void compile();
     void setMatrices();
+    void setMatricesEmiss(GLSLProgram& p);
 
     // Camera stuff
     glm::vec3 camPos = glm::vec3(5.0f, 7.5f, 7.5f);
