@@ -6,21 +6,29 @@ in vec3 vPosVS;
 layout (location = 0) out vec4 FragColor;
 
 // Set from C++
-uniform vec3 BladeColour;     // (1,1,1) for white
-uniform float Intensity;      // brightness, e.g. 5..20
-uniform float RimPower;       // e.g. 2.0..4.0
-uniform float RimIntensity;   // e.g. 0.0..1.0 (extra edge pop)
+uniform vec3 BladeColour;     
+uniform float Intensity;      
+uniform float RimPower;       
+uniform float RimIntensity;   
+
+// New (for glow shell control)
+uniform float Alpha;          // overall alpha scale, e.g. 0.15..0.6
+uniform float CoreAlpha;      // base alpha even at centre, e.g. 0.0..0.2
 
 void main()
 {
 	vec3 N = normalize(vNormalVS);
-	vec3 V = normalize(-vPosVS);               // camera is origin in view-space
+	vec3 V = normalize(-vPosVS); // camera at origin in view-space
 
-	float rim = pow(1.0 - max(dot(N, V), 0.0), RimPower);
+	float ndv = max(dot(N, V), 0.0);
+	float rim = pow(1.0 - ndv, RimPower);
 
-	// Pure emissive core + optional rim boost
+	// Emissive colour (core + extra rim pop)
 	vec3 col = BladeColour * Intensity;
 	col += BladeColour * (rim * RimIntensity * Intensity);
 
-	FragColor = vec4(col, 1.0);
+	// Alpha: mostly rim-driven for glow; CoreAlpha lets you keep a faint fill
+	float a = clamp(CoreAlpha + rim * Alpha, 0.0, 1.0);
+
+	FragColor = vec4(col, a);
 }

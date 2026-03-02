@@ -4,6 +4,7 @@ in vec3 SpotDir;
 in vec3 LightDir;
 in vec3 ViewDir;
 in vec2 TexCoord;
+in vec3 ViewPos;
 
 layout (location = 0) out vec4 FragColor;
 layout (binding = 0) uniform sampler2D DiffuseTex;
@@ -39,9 +40,12 @@ uniform struct FogInfo{
     vec3 Colour;
 }Fog;
 
-const int levels = 5;
-const float scaleFactor = 1.0/levels;
+//const int levels = 5;
+//const float scaleFactor = 1.0/levels;
 
+// Fog controls (simple + robust)
+uniform int   FogEnabled;   // 0 = off, 1 = on
+uniform float FogScale;     // 1.0 = normal, >1 stronger fog, <1 weaker
 
 
 vec3 blinnPhong(vec3 n) {
@@ -101,19 +105,32 @@ vec3 blinnPhongSpot(vec3 n)
     return ambient + spotScale * Spot.L * (diffuse + spec);
 }
 
+float fogFactorLinear(float dist)
+{
+    // 1 = fully shaded, 0 = fully fog
+    float f = (Fog.MaxDistance - dist) / (Fog.MaxDistance - Fog.MinDistance);
+    return clamp(f, 0.0, 1.0);
+}
 
-void main() {
-//fog stuff
-    //float distance = abs(Position.z);
-    //float fogFactor = (Fog.MaxDistance - distance) / (Fog.MaxDistance - Fog.MinDistance);
-    //fogFactor = clamp(fogFactor, 0.0, 1.0);
-    //vec3 shadeColour = blinnPhong(Position, normalize(Normal));
-    //vec3 Colour = mix(Fog.Colour, shadeColour, fogFactor);  // -- remember to put Colour instead of shadeColour when i want fog back
-
-
-//blinnphong
+void main()
+{
     vec3 normal = texture(NormalMapTex, TexCoord).xyz;
-    normal = normal * 2.0 - 1.0; 
-    normal = normalize(normal);
-    FragColor = vec4(blinnPhongSpot(normal), 1.0);
+    normal = normalize(normal * 2.0 - 1.0);
+
+    vec3 litColour = blinnPhongSpot(normal);
+
+    if (FogEnabled != 0)
+    {
+        // Use view-space distance; scale lets you tune “strength” easily
+        float dist = length(ViewPos) * max(FogScale, 0.0001);
+
+        float f = fogFactorLinear(dist);
+        vec3 finalColour = mix(Fog.Colour, litColour, f);
+
+        FragColor = vec4(finalColour, 1.0);
+    }
+    else
+    {
+        FragColor = vec4(litColour, 1.0);
+    }
 }

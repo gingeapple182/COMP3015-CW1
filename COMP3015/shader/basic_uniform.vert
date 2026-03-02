@@ -9,6 +9,7 @@ out vec3 SpotDir;
 out vec3 LightDir;
 out vec3 ViewDir;
 out vec2 TexCoord;
+out vec3 ViewPos;
 
 uniform struct LightInfo{
     vec4 Position;
@@ -44,9 +45,10 @@ void main()
 	// Columns are T, B, N
 	mat3 TBN = mat3(T, B, N);
 	mat3 invTBN = transpose(TBN);
-
+		
 	vec3 Position = (ModelViewMatrix * vec4(VertexPosition, 1.0)).xyz;
-
+	ViewPos = Position;
+	
 	vec3 lightDir;
 	if (Light.Position.w == 0.0)
 		lightDir = normalize(Light.Position.xyz);       // directional
