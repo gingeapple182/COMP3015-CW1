@@ -29,7 +29,7 @@ private:
 	std::unique_ptr<ObjMesh> BladeMEsh;
     glm::mat4 rotateModel;
     //GLuint C1diffuseTexture, C1normalMap;
-	GLuint LSdiffuseTexture, LSnormalMap;
+	GLuint LSdiffuseTexture, LSnormalMap, LSmixingTexture;
     //GLuint BladeDiffuseTexture;
     GLuint WorkbenchDiffuseMap;
     GLuint cubeTex;
@@ -41,10 +41,12 @@ private:
 	bool bladeOn = false;
 	bool fogEnabled = true;
 	float fogScale = 1.0f;
+	bool rusty = false;
 
     bool Q_Pressed = false;
 	bool E_Pressed = false;
 	bool F_Pressed = false;
+	bool R_Pressed = false;
     
     glm::vec3 bladeColour;
     std::array<glm::vec3, 6> bladeColours = {
@@ -81,6 +83,23 @@ private:
     float hiltYawSpeed = 90.0f;
     bool cursorCaptured = true;
     bool escWasDown = false;
+
+    // --- Edge detect (hilt only) ---
+    GLSLProgram hiltMaskProg;
+    GLSLProgram edgeProg;
+
+    GLuint hiltFbo = 0;
+    GLuint hiltMaskTex = 0;
+    GLuint hiltDepthRb = 0;
+
+    GLuint fsTriVao = 0;   // fullscreen triangle VAO
+    bool edgeEnabled = true; // optional toggle if you want
+
+    // tweakables
+    float edgeThreshold = 0.2f;   // higher = fewer edges
+    float edgeOpacity = 1.0f;   // 0..1
+    float edgeThickness = 1.0f;   // 1 = normal, 2 = thicker
+    glm::vec3 edgeColour = glm::vec3(0.0f); // black outline
 
 public:
     SceneBasic_Uniform();

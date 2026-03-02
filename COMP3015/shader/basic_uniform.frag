@@ -9,7 +9,7 @@ in vec3 ViewPos;
 layout (location = 0) out vec4 FragColor;
 layout (binding = 0) uniform sampler2D DiffuseTex;
 layout (binding = 1) uniform sampler2D NormalMapTex;
-layout (binding = 2) uniform sampler2D DiffuseTex2;
+layout (binding = 2) uniform sampler2D MixingTex;
 
 
 uniform struct MaterialInfo{
@@ -47,51 +47,62 @@ uniform struct FogInfo{
 uniform int   FogEnabled;   // 0 = off, 1 = on
 uniform float FogScale;     // 1.0 = normal, >1 stronger fog, <1 weaker
 
+// Mixing 
+uniform float MixAmount; // 0 = only DiffuseTex, 1 = full MixingTex (scaled by mask)
+
+vec3 getBaseColour()
+{
+    vec4 a = texture(DiffuseTex, TexCoord);
+    vec4 b = texture(MixingTex, TexCoord);
+
+    // Use MixingTex alpha as the per-pixel mask.
+    // If your MixingTex doesn't have alpha, use b.r (or dot(b.rgb, vec3(0.333))) instead.
+    float mask = b.a;
+
+    float t = clamp(mask * MixAmount, 0.0, 1.0);
+    return mix(a.rgb, b.rgb, t);
+}
 
 vec3 blinnPhong(vec3 n) {
-    vec3 diffuse = vec3(0.0f); 
+    vec3 diffuse = vec3(0.0f);
     vec3 spec = vec3(0.0f);
-    
-    vec3 texColour = texture(DiffuseTex, TexCoord).rgb;
+
+    vec3 texColour = getBaseColour();
 
     vec3 ambient = Light.La * texColour;
     vec3 s = normalize(LightDir);
-    //vec3 s = normalize(Light.Position.xyz - position);
 
     float sDotN = max(dot(s, n), 0.0);
-
     diffuse = texColour * sDotN;
 
     if (sDotN > 0.0) {
-	    vec3 v = normalize(ViewDir);
-		vec3 h = normalize(v + s);
-		spec = Material.Ks * pow(max(dot(h, n), 0.0), Material.Shininess);
-	}
+        vec3 v = normalize(ViewDir);
+        vec3 h = normalize(v + s);
+        spec = Material.Ks * pow(max(dot(h, n), 0.0), Material.Shininess);
+    }
     return ambient + (diffuse + spec) * Light.L;
 }
 
-
-
 vec3 blinnPhongSpot(vec3 n)
 {
-    vec3 texColour = texture(DiffuseTex, TexCoord).rgb;
+    vec3 texColour = getBaseColour();
 
     vec3 ambient = Spot.La * texColour;
 
-    vec3 s = normalize(LightDir);  // tangent-space light dir
+    vec3 s = normalize(LightDir);
     vec3 v = normalize(ViewDir);
 
     float cosAng = dot(normalize(-s), normalize(SpotDir));
 
-    float outer = cos(Spot.Cutoff);                 // outer cone edge 
-    float inner = cos(Spot.Cutoff * 0.85);          // inner cone edge
+    float outer = cos(Spot.Cutoff);
+    float inner = cos(Spot.Cutoff * 0.85);
 
     float spotEdge = smoothstep(outer, inner, cosAng);
     float spotCore = pow(max(cosAng, 0.0), Spot.Exponent);
     float spotScale = spotEdge * spotCore;
 
     if (spotScale <= 0.001)
-	    return ambient;
+        return ambient;
 
     float sDotN = max(dot(s, n), 0.0);
     vec3 diffuse = texColour * sDotN;
@@ -104,6 +115,7 @@ vec3 blinnPhongSpot(vec3 n)
 
     return ambient + spotScale * Spot.L * (diffuse + spec);
 }
+
 
 float fogFactorLinear(float dist)
 {
@@ -121,12 +133,9 @@ void main()
 
     if (FogEnabled != 0)
     {
-        // Use view-space distance; scale lets you tune “strength” easily
         float dist = length(ViewPos) * max(FogScale, 0.0001);
-
         float f = fogFactorLinear(dist);
         vec3 finalColour = mix(Fog.Colour, litColour, f);
-
         FragColor = vec4(finalColour, 1.0);
     }
     else

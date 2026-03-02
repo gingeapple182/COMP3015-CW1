@@ -76,6 +76,7 @@ void SceneBasic_Uniform::initScene()
 
 	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_BaseColor1.png");
 	LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_Normal.png");
+	LSmixingTexture = Texture::loadTexture("media/texture/rust.png");
 
 	WorkbenchDiffuseMap = Texture::loadTexture("media/texture/workbench.png");
 	
@@ -156,6 +157,12 @@ void SceneBasic_Uniform::update(float t)
 			fogEnabled = !fogEnabled;
 		}
 		F_Pressed = (glfwGetKey(win, GLFW_KEY_F) == GLFW_PRESS);
+		//rusty toggle
+		if (glfwGetKey(win, GLFW_KEY_R) == GLFW_PRESS && !R_Pressed)
+		{
+			rusty = !rusty;
+		}
+		R_Pressed = (glfwGetKey(win, GLFW_KEY_R) == GLFW_PRESS);
 		//rotate hilt
 		if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS)
 			hiltYawDeg -= hiltYawSpeed * deltaT;
@@ -224,6 +231,9 @@ void SceneBasic_Uniform::render()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, WorkbenchDiffuseMap);
 
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, WorkbenchDiffuseMap);
+
 	prog.setUniform("Material.Ks", vec3(0.0f));
 	prog.setUniform("Material.Ka", vec3(0.1f));
 	prog.setUniform("Material.Shininess", 180.0f);
@@ -242,9 +252,19 @@ void SceneBasic_Uniform::render()
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, LSnormalMap);
 
+	if (rusty) {
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, LSmixingTexture);
+	}
+	else {
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, LSdiffuseTexture);
+	}
+
 	prog.setUniform("Material.Ks", vec3(0.25f));
 	prog.setUniform("Material.Ka", vec3(0.15f));
 	prog.setUniform("Material.Shininess", 80.0f);
+	prog.setUniform("MixAmount", 1.0f);
 
 	model = mat4(1.0f);
 	model = glm::translate(model, vec3(-1.0f, 2.0f, 2.0f));
@@ -256,6 +276,9 @@ void SceneBasic_Uniform::render()
 	setMatrices();
 	LightsaberMesh->render();
 
+
+	//glDeleteTextures(1, &LSmixingTexture);
+	//glDisable(GL_TEXTURE_2D);
 
 	// Blade
 	if (bladeOn)
