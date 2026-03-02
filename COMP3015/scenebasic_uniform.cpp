@@ -22,12 +22,14 @@ using glm::mat4;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::pi<float>() / 2.0f), plane(79.4f, 53.2f, 100, 100), sky(100.0f) {
 	LightsaberMesh = ObjMesh::load("media/Lightsaber_03.obj", true);
-	BladeMEsh = ObjMesh::load("media/cylinder.obj", true);
+	BladeMEsh = ObjMesh::load("media/cylinder2.obj", true);
 }
 
 void SceneBasic_Uniform::initScene()
 {
     compile();
+	glGenVertexArrays(1, &fsTriVao);
+
 	prog.use();
 	glEnable(GL_DEPTH_TEST);
 
@@ -35,8 +37,25 @@ void SceneBasic_Uniform::initScene()
 	glClearStencil(0);
 
 	model = mat4(1.0f);
-	view = glm::lookAt(vec3(5.0f, 7.5f, 7.5f), vec3(0.0f, 0.75f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-	//view = glm::lookAt(camPos, camPos + camFront, camUp);
+	
+	// Derive orbit angles from your current placement (so it starts EXACTLY where it used to)
+	glm::vec3 off = camPos - camTarget;
+	camDistance = glm::length(off);
+
+	glm::vec3 dir = off / camDistance;
+
+	camYawDeg = glm::degrees(atan2f(dir.z, dir.x)); // [-180..180]
+	camPitchDeg = glm::degrees(asinf(dir.y));         // [-90..90]
+
+	// Set centre + limits around that starting pitch (keeps height sensible)
+	yawCentreDeg = camYawDeg;
+	pitchCentreDeg = camPitchDeg;
+
+	// Restrict how far you can go up/down from the starting view
+	pitchMinDeg = camPitchDeg - 10.0f;   // allow a LITTLE lower than start
+	pitchMaxDeg = camPitchDeg + 15.0f;   // allow a bit higher than start
+
+	updateCamera(0.0f); // builds view from orbit values
 
 	GLFWwindow* win = glfwGetCurrentContext();
 	if (win)
@@ -113,6 +132,16 @@ void SceneBasic_Uniform::compile()
 		skyboxShader.compileShader("shader/skybox.frag");
 		skyboxShader.link();
 		skyboxShader.use();
+
+		hiltMaskProg.compileShader("shader/hilt_mask.vert");
+		hiltMaskProg.compileShader("shader/hilt_mask.frag");
+		hiltMaskProg.link();
+		hiltMaskProg.use();
+
+		edgeProg.compileShader("shader/edge_tri.vert");
+		edgeProg.compileShader("shader/edge_detect.frag");
+		edgeProg.link();
+		edgeProg.use();
 	}
 	catch (GLSLProgramException& e) {
 		cerr << e.what() << endl;
@@ -163,6 +192,12 @@ void SceneBasic_Uniform::update(float t)
 			rusty = !rusty;
 		}
 		R_Pressed = (glfwGetKey(win, GLFW_KEY_R) == GLFW_PRESS);
+		//edging
+		if (glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS && !C_Pressed)
+		{
+			edgeEnabled = !edgeEnabled;
+		}
+		C_Pressed = (glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
 		//rotate hilt
 		if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS)
 			hiltYawDeg -= hiltYawSpeed * deltaT;
@@ -176,8 +211,8 @@ void SceneBasic_Uniform::update(float t)
 		if (hiltYawDeg > 360.0f) hiltYawDeg -= 360.0f;
 		if (hiltYawDeg < 0.0f)   hiltYawDeg += 360.0f;
 	}
+	updateCamera(deltaT);
 	render();
-
 }
 
 void SceneBasic_Uniform::render()
@@ -277,16 +312,78 @@ void SceneBasic_Uniform::render()
 	LightsaberMesh->render();
 
 
-	//glDeleteTextures(1, &LSmixingTexture);
-	//glDisable(GL_TEXTURE_2D);
+	if (edgeEnabled)
+	{
+		// ---------- HILT EDGE PASS A: render hilt mask into FBO ----------
+		glBindFramebuffer(GL_FRAMEBUFFER, hiltFbo);
+		glViewport(0, 0, width, height);
+
+		glDisable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+
+		glClearColor(0, 0, 0, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		hiltMaskProg.use();
+
+		// Reuse the same model transform you used for the hilt
+		// (IMPORTANT: copy/paste the same model matrix setup)
+		model = mat4(1.0f);
+		model = glm::translate(model, vec3(-1.0f, 2.0f, 2.0f));
+		model = glm::scale(model, vec3(1.5f));
+		model = glm::rotate(model, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(300.0f), vec3(0.0f, 0.0f, 1.0f));
+		model = glm::rotate(model, glm::radians(hiltYawDeg), vec3(0.0f, 1.0f, 0.0f));
+
+		// For the mask shader we only need MVP
+		mat4 mv = view * model;
+		hiltMaskProg.setUniform("MVP", projection * mv);
+
+		LightsaberMesh->render();
+
+		// ---------- HILT EDGE PASS B: Sobel detect over main framebuffer ----------
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, width, height);
+
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		edgeProg.use();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, hiltMaskTex);
+		edgeProg.setUniform("MaskTex", 0);
+
+		edgeProg.setUniform("TexelSize", glm::vec2(1.0f / width, 1.0f / height));
+		edgeProg.setUniform("Threshold", edgeThreshold);
+		edgeProg.setUniform("Opacity", edgeOpacity);
+		edgeProg.setUniform("Thickness", edgeThickness);
+		edgeProg.setUniform("EdgeColour", edgeColour);
+
+		glBindVertexArray(fsTriVao);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindVertexArray(0);
+
+		// Restore defaults
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
+		glEnable(GL_DEPTH_TEST);
+	}
+
 
 	// Blade
 	if (bladeOn)
 	{
 		glm::mat4 bladeBase = mat4(1.0f);
-		bladeBase = glm::translate(bladeBase, vec3(10.0f, 2.1f, -4.0f));
+		bladeBase = glm::translate(bladeBase, vec3(10.0f, 2.1f, -4.3f));
 		bladeBase = glm::rotate(bladeBase, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
 		bladeBase = glm::rotate(bladeBase, glm::radians(300.0f), vec3(0.0f, 0.0f, 1.0f));
+		// push “up” the blade
+		float bladeOut = 15.0f;
+		bladeBase = bladeBase * glm::translate(mat4(1.0f), vec3(0.0f, bladeOut, 0.0f));
 
 		// -------- Pass 1: White core (writes stencil = 1 where the blade is) --------
 		bladeEmissive.use();
@@ -356,10 +453,6 @@ void SceneBasic_Uniform::render()
 		glStencilFunc(GL_ALWAYS, 0, 0xFF);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	}
-
-	
-
-	
 }
 
 void SceneBasic_Uniform::setMatrices() {
@@ -394,4 +487,117 @@ void SceneBasic_Uniform::resize(int w, int h) {
 	width = w;
     height = h;
 	projection = glm::perspective(glm::radians(70.0f), (float)w / h, 0.3f, 100.0f);
+	initHiltEdgeFbo(w, h);
+}
+
+static float wrapDeg(float a)
+{
+	while (a > 180.0f) a -= 360.0f;
+	while (a < -180.0f) a += 360.0f;
+	return a;
+}
+
+void SceneBasic_Uniform::updateCamera(float dt)
+{
+	GLFWwindow* win = glfwGetCurrentContext();
+	if (!win) return;
+
+	float yawInput = 0.0f;
+	if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(win, GLFW_KEY_LEFT) == GLFW_PRESS) yawInput -= 1.0f;
+	if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(win, GLFW_KEY_RIGHT) == GLFW_PRESS) yawInput += 1.0f;
+	yawInput += 0.01f;
+
+	camYawDeg += yawInput * camYawSpeedDeg * dt;
+
+	bool mouseMoved = false;
+
+	if (cursorCaptured)
+	{
+		double mx, my;
+		glfwGetCursorPos(win, &mx, &my);
+
+		if (firstMouse)
+		{
+			lastMouseX = mx;
+			lastMouseY = my;
+			firstMouse = false;
+		}
+
+		double dx = mx - lastMouseX;
+		double dy = my - lastMouseY;
+		lastMouseX = mx;
+		lastMouseY = my;
+
+		mouseMoved = (dx != 0.0 || dy != 0.0);
+
+		camYawDeg += (float)dx * mouseSensitivity;
+		camPitchDeg -= (float)dy * mouseSensitivity;
+	}
+
+	// Clamp pitch AFTER all changes
+	camPitchDeg = glm::clamp(camPitchDeg, pitchMinDeg, pitchMaxDeg);
+
+	// Optional yaw restriction
+	if (limitYaw)
+	{
+		float rel = wrapDeg(camYawDeg - yawCentreDeg);
+		rel = glm::clamp(rel, -yawLimitDeg, yawLimitDeg);
+		camYawDeg = yawCentreDeg + rel;
+	}
+
+	// Auto recentre ONLY when no input
+	if (autoRecentre && yawInput == 0.0f && !mouseMoved)
+	{
+		camYawDeg = glm::mix(camYawDeg, yawCentreDeg, 1.0f - expf(-yawReturnSpeed * dt));
+		camPitchDeg = glm::mix(camPitchDeg, pitchCentreDeg, 1.0f - expf(-pitchReturnSpeed * dt));
+	}
+
+	float yawRad = glm::radians(camYawDeg);
+	float pitchRad = glm::radians(camPitchDeg);
+
+	glm::vec3 offset;
+	offset.x = camDistance * cosf(pitchRad) * cosf(yawRad);
+	offset.y = camDistance * sinf(pitchRad);
+	offset.z = camDistance * cosf(pitchRad) * sinf(yawRad);
+
+	camPos = camTarget + offset;
+	view = glm::lookAt(camPos, camTarget, camUp);
+}
+
+void SceneBasic_Uniform::initHiltEdgeFbo(int w, int h)
+{
+	// Clean up old
+	if (hiltMaskTex) glDeleteTextures(1, &hiltMaskTex);
+	if (hiltDepthRb) glDeleteRenderbuffers(1, &hiltDepthRb);
+	if (hiltFbo) glDeleteFramebuffers(1, &hiltFbo);
+
+	// Colour mask texture
+	glGenTextures(1, &hiltMaskTex);
+	glBindTexture(GL_TEXTURE_2D, hiltMaskTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// Depth buffer
+	glGenRenderbuffers(1, &hiltDepthRb);
+	glBindRenderbuffer(GL_RENDERBUFFER, hiltDepthRb);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+
+	// FBO
+	glGenFramebuffers(1, &hiltFbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, hiltFbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, hiltMaskTex, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, hiltDepthRb);
+
+	GLenum drawBufs[] = { GL_COLOR_ATTACHMENT0 };
+	glDrawBuffers(1, drawBufs);
+
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE) {
+		std::cerr << "Hilt edge FBO incomplete: " << status << std::endl;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

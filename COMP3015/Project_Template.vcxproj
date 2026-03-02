@@ -165,6 +165,10 @@
     <None Include="shader\basic_uniform.vert" />
     <None Include="shader\blade.frag" />
     <None Include="shader\blade.vert" />
+    <None Include="shader\edge_detect.frag" />
+    <None Include="shader\edge_tri.vert" />
+    <None Include="shader\hilt_mask.frag" />
+    <None Include="shader\hilt_mask.vert" />
     <None Include="shader\skybox.frag" />
     <None Include="shader\skybox.vert" />
   </ItemGroup>
