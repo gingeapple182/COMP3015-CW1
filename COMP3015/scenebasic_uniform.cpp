@@ -21,8 +21,6 @@ using glm::mat3;
 using glm::mat4;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : tPrev(0), angle(0.0f), rotSpeed(glm::pi<float>() / 2.0f), plane(79.4f, 53.2f, 100, 100), sky(100.0f) {
-	//C1Mesh = ObjMesh::load("media/C1-10P_obj.obj", true);
-	//LightsaberMesh = ObjMesh::load("media/Lightsaber_01.obj", true);
 	LightsaberMesh = ObjMesh::load("media/Lightsaber_03.obj", true);
 	BladeMEsh = ObjMesh::load("media/cylinder.obj", true);
 }
@@ -79,7 +77,6 @@ void SceneBasic_Uniform::initScene()
 	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_BaseColor1.png");
 	LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_Normal.png");
 
-	//BladeDiffuseTexture = Texture::loadTexture("media/texture/white.jpg");
 	WorkbenchDiffuseMap = Texture::loadTexture("media/texture/workbench.png");
 	
 	skyboxShader.use();
@@ -91,7 +88,11 @@ void SceneBasic_Uniform::initScene()
 	bladeEmissive.setUniform("RimPower", 2.5f);
 	bladeEmissive.setUniform("RimIntensity", 0.6f);
 
-	
+	fogColour = bladeColours[bladeColourIndex];
+	prog.use();
+	prog.setUniform("Fog.Colour", fogColour);
+
+	updateFogColour();
 }
 
 void SceneBasic_Uniform::compile()
@@ -133,7 +134,9 @@ void SceneBasic_Uniform::update(float t)
 	{
 		//blade toggle
 		if (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS && !Q_Pressed) {
-			bladeOn = !bladeOn;   // toggle once
+			bladeOn = !bladeOn;
+			updateFogColour();
+
 		}
 		Q_Pressed = (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS);
 		// colour cycling
@@ -143,12 +146,14 @@ void SceneBasic_Uniform::update(float t)
 
 			bladeEmissive.use();
 			bladeEmissive.setUniform("BladeColour", bladeColours[bladeColourIndex]);
+
+			updateFogColour();
 		}
 		E_Pressed = (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS);
 		//fog stuff
 		if (glfwGetKey(win, GLFW_KEY_F) == GLFW_PRESS && !F_Pressed)
 		{
-			fogEnabled = !fogEnabled;   // toggle once
+			fogEnabled = !fogEnabled;
 		}
 		F_Pressed = (glfwGetKey(win, GLFW_KEY_F) == GLFW_PRESS);
 		//rotate hilt
@@ -206,8 +211,8 @@ void SceneBasic_Uniform::render()
 	skyboxShader.setUniform("MVP", skyMVP);
 
 	skyboxShader.setUniform("FogEnabled", fogEnabled ? 1 : 0);
-	skyboxShader.setUniform("FogColour", glm::vec3(1.0f, 0.0f, 1.0f)); // or match your Fog.Colour
-	skyboxShader.setUniform("SkyFogAmount", 0.35f); // tweak 0.0 -> 1.0
+	skyboxShader.setUniform("FogColour", fogColour);
+	skyboxShader.setUniform("SkyFogAmount", skyFogAmount);
 
 	sky.render();
 
@@ -346,6 +351,19 @@ void SceneBasic_Uniform::setMatricesEmiss() {
 	bladeEmissive.setUniform("ModelViewMatrix", mv);
 	bladeEmissive.setUniform("NormalMatrix", glm::mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
 	bladeEmissive.setUniform("MVP", projection * mv);
+}
+
+void SceneBasic_Uniform::updateFogColour()
+{
+	fogColour = bladeOn ? bladeColours[bladeColourIndex] : fogGrey;
+
+	// Update main scene shader fog colour
+	prog.use();
+	prog.setUniform("Fog.Colour", fogColour);
+
+	// Update skybox fog colour too (so it stays consistent)
+	skyboxShader.use();
+	skyboxShader.setUniform("FogColour", fogColour);
 }
 
 void SceneBasic_Uniform::resize(int w, int h) {

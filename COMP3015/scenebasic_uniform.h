@@ -41,28 +41,32 @@ private:
 	bool bladeOn = false;
 	bool fogEnabled = true;
 	float fogScale = 1.0f;
-    glm::vec3 fogColour = glm::vec3(1.0f, 0.0f, 1.0f);
+
     bool Q_Pressed = false;
 	bool E_Pressed = false;
 	bool F_Pressed = false;
+    
     glm::vec3 bladeColour;
     std::array<glm::vec3, 6> bladeColours = {
         glm::vec3(0.0f, 0.5f, 1.0f),  // BLUE
         glm::vec3(0.0f, 1.0f, 0.0f),   // GREEN
-        glm::vec3(1.0f, 0.35f, 0.0f),   // YELLOW
+        glm::vec3(1.0f, 1.0f, 0.0f),   // YELLOW
         glm::vec3(1.0f, 0.0f, 0.0f),   // RED
         glm::vec3(1.0f, 0.0f, 1.0f),   // MAGENTA
         glm::vec3(1.0f, 1.0f, 1.0f),    // WHITE
     };
     int bladeColourIndex = 0;
-
+    glm::vec3 fogColour = glm::vec3(0.6f, 0.6f, 0.6f);
+    const glm::vec3 fogGrey = glm::vec3(0.6f, 0.6f, 0.6f);
+    float skyFogAmount = 0.35f;
 
 
     GLSLProgram prog, skyboxShader, bladeEmissive;
     void compile();
     void setMatrices();
     void setMatricesEmiss();
-
+    void updateFogColour();
+    
     // Camera stuff
     glm::vec3 camPos = glm::vec3(5.0f, 7.5f, 7.5f);
     glm::vec3 camFront = glm::normalize(glm::vec3(0.0f, 0.75f, 0.0f) - camPos);
