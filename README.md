@@ -20,7 +20,7 @@ https://github.com/user-attachments/assets/3c9ecd3c-407d-431a-aa53-2da09e3eedd7
 
 ### Running the pre-built executable
 - A compiled **.exe** is included in the download (see the included executable folder in the repo/submission).
-- Run the `.exe` directly to use the prototype without Visual Studio.
+- Run the `COMP3015_CW1_OCole.exe` directly to use the prototype without Visual Studio.
 - If Windows blocks it: right click → **Properties** → tick **Unblock** → Apply.
 
 ### Building from source (Visual Studio)
