@@ -38,22 +38,22 @@ void SceneBasic_Uniform::initScene()
 
 	model = mat4(1.0f);
 	
-	// Derive orbit angles from your current placement (so it starts EXACTLY where it used to)
+	// Derive orbit angles from your current placement
 	glm::vec3 off = camPos - camTarget;
 	camDistance = glm::length(off);
 
 	glm::vec3 dir = off / camDistance;
 
-	camYawDeg = glm::degrees(atan2f(dir.z, dir.x)); // [-180..180]
-	camPitchDeg = glm::degrees(asinf(dir.y));         // [-90..90]
+	camYawDeg = glm::degrees(atan2f(dir.z, dir.x));
+	camPitchDeg = glm::degrees(asinf(dir.y));
 
 	// Set centre + limits around that starting pitch (keeps height sensible)
 	yawCentreDeg = camYawDeg;
 	pitchCentreDeg = camPitchDeg;
 
 	// Restrict how far you can go up/down from the starting view
-	pitchMinDeg = camPitchDeg - 10.0f;   // allow a LITTLE lower than start
-	pitchMaxDeg = camPitchDeg + 15.0f;   // allow a bit higher than start
+	pitchMinDeg = camPitchDeg - 10.0f;
+	pitchMaxDeg = camPitchDeg + 15.0f;
 
 	updateCamera(0.0f); // builds view from orbit values
 
@@ -81,35 +81,36 @@ void SceneBasic_Uniform::initScene()
 
 	prog.setUniform("Light.L", vec3(0.5f));
 	prog.setUniform("Light.La", vec3(0.25f));
-
-	//fog
-	prog.setUniform("Fog.MinDistance", 10.0f);
-	prog.setUniform("Fog.MaxDistance", 45.0f);
-	prog.setUniform("Fog.Colour", fogColour);
 	
-
-	cubeTex = Texture::loadCubeMap("media/texture/cube/space/space");
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeTex);
-
-
+	
+	// model
 	LSdiffuseTexture = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_BaseColor1.png");
 	LSnormalMap = Texture::loadTexture("media/texture/Lightsaber_03_exp_lambert1_Normal.png");
 	LSmixingTexture = Texture::loadTexture("media/texture/rust.png");
 
+	// plane
 	WorkbenchDiffuseMap = Texture::loadTexture("media/texture/workbench.png");
 	
+	// skybox
+	cubeTex = Texture::loadCubeMap("media/texture/cube/space/space");
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeTex);
 	skyboxShader.use();
 	skyboxShader.setUniform("FogColour", fogColour);
 	
+	// blade stuff
 	bladeEmissive.use();
 	bladeEmissive.setUniform("BladeColour", bladeColours[bladeColourIndex]);
 	bladeEmissive.setUniform("Intensity", 8.0f);
 	bladeEmissive.setUniform("RimPower", 2.5f);
 	bladeEmissive.setUniform("RimIntensity", 0.6f);
 
+	// fog
 	fogColour = bladeColours[bladeColourIndex];
 	prog.use();
+	prog.setUniform("Fog.MinDistance", 10.0f);
+	prog.setUniform("Fog.MaxDistance", 45.0f);
+	prog.setUniform("Fog.Colour", fogColour);
 	prog.setUniform("Fog.Colour", fogColour);
 
 	updateFogColour();
@@ -166,12 +167,10 @@ void SceneBasic_Uniform::update(float t)
 		if (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS && !Q_Pressed) {
 			bladeOn = !bladeOn;
 			updateFogColour();
-
 		}
 		Q_Pressed = (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS);
 		// colour cycling
-		if (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS && !E_Pressed)
-		{
+		if (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS && !E_Pressed) {
 			bladeColourIndex = (bladeColourIndex + 1) % (int)bladeColours.size();
 
 			bladeEmissive.use();
@@ -181,20 +180,17 @@ void SceneBasic_Uniform::update(float t)
 		}
 		E_Pressed = (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS);
 		//fog stuff
-		if (glfwGetKey(win, GLFW_KEY_F) == GLFW_PRESS && !F_Pressed)
-		{
+		if (glfwGetKey(win, GLFW_KEY_F) == GLFW_PRESS && !F_Pressed) {
 			fogEnabled = !fogEnabled;
 		}
 		F_Pressed = (glfwGetKey(win, GLFW_KEY_F) == GLFW_PRESS);
 		//rusty toggle
-		if (glfwGetKey(win, GLFW_KEY_R) == GLFW_PRESS && !R_Pressed)
-		{
+		if (glfwGetKey(win, GLFW_KEY_R) == GLFW_PRESS && !R_Pressed) {
 			rusty = !rusty;
 		}
 		R_Pressed = (glfwGetKey(win, GLFW_KEY_R) == GLFW_PRESS);
 		//edging
-		if (glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS && !C_Pressed)
-		{
+		if (glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS && !C_Pressed) {
 			edgeEnabled = !edgeEnabled;
 		}
 		C_Pressed = (glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
@@ -217,10 +213,8 @@ void SceneBasic_Uniform::update(float t)
 
 void SceneBasic_Uniform::render()
 {
-
 	prog.use();
 
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	// BlinnPhong spotlight
@@ -232,15 +226,16 @@ void SceneBasic_Uniform::render()
 
 	glm::vec3 lightDirView = glm::mat3(view) * lightDirWorldSpot;
 	prog.setUniform("Spot.Direction", lightDirView);
-	
 
 	glm::vec3 lightDirWorld = glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f));
 	glm::vec3 lightDirViewSpace = glm::mat3(view) * -lightDirWorld;
 	prog.setUniform("Light.Position", glm::vec4(lightDirViewSpace, 0.0f));
 
 
+	// fog
 	prog.setUniform("FogEnabled", fogEnabled ? 1 : 0);
 	prog.setUniform("FogScale", fogScale);
+
 
 	// Skybox stuff
 	skyboxShader.use();
@@ -259,10 +254,9 @@ void SceneBasic_Uniform::render()
 	sky.render();
 
 
-	
-
 	prog.use();
-	//// Workbench
+
+	// Workbench
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, WorkbenchDiffuseMap);
 
@@ -280,6 +274,7 @@ void SceneBasic_Uniform::render()
 	setMatrices();
 	plane.render();
 
+
 	// Lightsaber hilt
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, LSdiffuseTexture);
@@ -290,8 +285,7 @@ void SceneBasic_Uniform::render()
 	if (rusty) {
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, LSmixingTexture);
-	}
-	else {
+	} else {
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, LSdiffuseTexture);
 	}
@@ -299,7 +293,7 @@ void SceneBasic_Uniform::render()
 	prog.setUniform("Material.Ks", vec3(0.25f));
 	prog.setUniform("Material.Ka", vec3(0.15f));
 	prog.setUniform("Material.Shininess", 80.0f);
-	prog.setUniform("MixAmount", 1.0f);
+	prog.setUniform("MixAmount", 0.8f);
 
 	model = mat4(1.0f);
 	model = glm::translate(model, vec3(-1.0f, 2.0f, 2.0f));
@@ -311,10 +305,9 @@ void SceneBasic_Uniform::render()
 	setMatrices();
 	LightsaberMesh->render();
 
-
 	if (edgeEnabled)
 	{
-		// ---------- HILT EDGE PASS A: render hilt mask into FBO ----------
+		// Pass A: render hilt mask into FBO 
 		glBindFramebuffer(GL_FRAMEBUFFER, hiltFbo);
 		glViewport(0, 0, width, height);
 
@@ -327,8 +320,7 @@ void SceneBasic_Uniform::render()
 
 		hiltMaskProg.use();
 
-		// Reuse the same model transform you used for the hilt
-		// (IMPORTANT: copy/paste the same model matrix setup)
+		// copy from hilt stuff above
 		model = mat4(1.0f);
 		model = glm::translate(model, vec3(-1.0f, 2.0f, 2.0f));
 		model = glm::scale(model, vec3(1.5f));
@@ -336,13 +328,12 @@ void SceneBasic_Uniform::render()
 		model = glm::rotate(model, glm::radians(300.0f), vec3(0.0f, 0.0f, 1.0f));
 		model = glm::rotate(model, glm::radians(hiltYawDeg), vec3(0.0f, 1.0f, 0.0f));
 
-		// For the mask shader we only need MVP
 		mat4 mv = view * model;
 		hiltMaskProg.setUniform("MVP", projection * mv);
 
 		LightsaberMesh->render();
 
-		// ---------- HILT EDGE PASS B: Sobel detect over main framebuffer ----------
+		// Pass B: Sobel detect over main framebuffer 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, width, height);
 
@@ -381,18 +372,18 @@ void SceneBasic_Uniform::render()
 		bladeBase = glm::translate(bladeBase, vec3(10.0f, 2.1f, -4.3f));
 		bladeBase = glm::rotate(bladeBase, glm::radians(270.0f), vec3(1.0f, 0.0f, 0.0f));
 		bladeBase = glm::rotate(bladeBase, glm::radians(300.0f), vec3(0.0f, 0.0f, 1.0f));
-		// push “up” the blade
+		// push the blade up
 		float bladeOut = 15.0f;
 		bladeBase = bladeBase * glm::translate(mat4(1.0f), vec3(0.0f, bladeOut, 0.0f));
 
-		// -------- Pass 1: White core (writes stencil = 1 where the blade is) --------
+		//  Pass 1: White core
 		bladeEmissive.use();
 
 		glDisable(GL_BLEND);
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);
 
-		// Stencil: always write 1 where fragments pass depth test
+		// Stencil
 		glStencilMask(0xFF);
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
@@ -411,19 +402,16 @@ void SceneBasic_Uniform::render()
 
 		BladeMEsh->render();
 
-		// -------- Pass 2: Coloured glow shell (only OUTSIDE the core silhouette) --------
+		//  Pass 2: blade glow colour
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
 
-		// Don’t write depth for glow, but DO depth test so hilt blocks it
 		glDepthMask(GL_FALSE);
 
-		// Stencil: only draw where stencil != 1 (i.e., outside the core)
 		glStencilMask(0x00);
 		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-		// Optional but usually improves the “wrap” look:
 		// render only backfaces of the enlarged shell so it appears as an outline
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_FRONT);
@@ -442,7 +430,7 @@ void SceneBasic_Uniform::render()
 
 		BladeMEsh->render();
 
-		// -------- Restore state --------
+		// Reset
 		glCullFace(GL_BACK);
 		glDisable(GL_CULL_FACE);
 
@@ -473,11 +461,10 @@ void SceneBasic_Uniform::updateFogColour()
 {
 	fogColour = bladeOn ? bladeColours[bladeColourIndex] : fogGrey;
 
-	// Update main scene shader fog colour
+	// update shaders for skybox + normal
 	prog.use();
 	prog.setUniform("Fog.Colour", fogColour);
 
-	// Update skybox fog colour too (so it stays consistent)
 	skyboxShader.use();
 	skyboxShader.setUniform("FogColour", fogColour);
 }
@@ -502,6 +489,7 @@ void SceneBasic_Uniform::updateCamera(float dt)
 	GLFWwindow* win = glfwGetCurrentContext();
 	if (!win) return;
 
+	// spin camera
 	float yawInput = 0.0f;
 	if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(win, GLFW_KEY_LEFT) == GLFW_PRESS) yawInput -= 1.0f;
 	if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(win, GLFW_KEY_RIGHT) == GLFW_PRESS) yawInput += 1.0f;
@@ -534,10 +522,10 @@ void SceneBasic_Uniform::updateCamera(float dt)
 		camPitchDeg -= (float)dy * mouseSensitivity;
 	}
 
-	// Clamp pitch AFTER all changes
+	// Clamp pitch
 	camPitchDeg = glm::clamp(camPitchDeg, pitchMinDeg, pitchMaxDeg);
 
-	// Optional yaw restriction
+	//  yaw restriction
 	if (limitYaw)
 	{
 		float rel = wrapDeg(camYawDeg - yawCentreDeg);
@@ -545,7 +533,6 @@ void SceneBasic_Uniform::updateCamera(float dt)
 		camYawDeg = yawCentreDeg + rel;
 	}
 
-	// Auto recentre ONLY when no input
 	if (autoRecentre && yawInput == 0.0f && !mouseMoved)
 	{
 		camYawDeg = glm::mix(camYawDeg, yawCentreDeg, 1.0f - expf(-yawReturnSpeed * dt));
@@ -566,7 +553,7 @@ void SceneBasic_Uniform::updateCamera(float dt)
 
 void SceneBasic_Uniform::initHiltEdgeFbo(int w, int h)
 {
-	// Clean up old
+	// Clean up
 	if (hiltMaskTex) glDeleteTextures(1, &hiltMaskTex);
 	if (hiltDepthRb) glDeleteRenderbuffers(1, &hiltDepthRb);
 	if (hiltFbo) glDeleteFramebuffers(1, &hiltFbo);
